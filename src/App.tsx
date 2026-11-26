@@ -174,11 +174,24 @@ function AdminPage() {
     if (!db || !session) return
     const path = session.user.id + '/profile/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
     const { error } = await db.storage.from(MEDIA_BUCKET).upload(path, file, { upsert: false })
-    if (error) setNotice(error.message)
-    else {
-      setProfile((current: Profile) => ({ ...current, [field]: path }))
-      setNotice(field === 'cv_path' ? 'CV uploaded. Save your profile to publish the link.' : 'Profile image uploaded. Save your profile to publish it.')
+    if (error) {
+      setNotice(error.message)
+      return
     }
+    if (field === 'cv_path') {
+      // Save the CV path immediately so the public link works without a separate profile-save step.
+      const { error: saveError } = await db.from('profiles').update({ cv_path: path }).eq('owner_id', session.user.id)
+      if (saveError) {
+        await db.storage.from(MEDIA_BUCKET).remove([path])
+        setNotice('CV uploaded but could not be published: ' + saveError.message)
+        return
+      }
+      setProfile((current: Profile) => ({ ...current, cv_path: path }))
+      setNotice('CV uploaded and published. Visitors can now open or download it.')
+      return
+    }
+    setProfile((current: Profile) => ({ ...current, profile_image_path: path }))
+    setNotice('Profile image uploaded. Save your profile to publish it.')
   }
 
   const removeProfileCv = async () => {
