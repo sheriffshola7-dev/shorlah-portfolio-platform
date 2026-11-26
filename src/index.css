@@ -12,3 +12,5 @@
 .form-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.cancel-edit{border:0;background:transparent;color:#71806a;font-size:11px;padding:12px}.asset-hint{display:block;color:#68894b;font-size:10px;margin-top:-12px}
 
 .testimonial-block{margin:55px 0;padding:30px;background:#edf2e9;border-left:3px solid #9bc75f}.testimonial-block .eyebrow{display:block}.testimonial-block blockquote{font:600 21px/1.65 Manrope;color:#384536;margin:18px 0}.testimonial-block p{font-size:11px;color:#788374;margin:0}
+
+.cv-upload-status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:-8px}.cv-remove-button{border:1px solid #e5c7c2;background:#fff7f5;color:#a44a40;padding:8px 11px;font-size:11px;cursor:pointer}.cv-remove-button:hover{background:#fbe9e5}
