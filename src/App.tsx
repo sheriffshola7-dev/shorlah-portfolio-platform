@@ -32,7 +32,7 @@ function usePortfolio() {
 }
 
 function Brand() {
-  return <Link to="/" className="brand"><span className="brand-mark">S<span>.</span></span><span>SHORLAH CLOUD<small>INDEPENDENT DIGITAL STUDIO</small></span></Link>
+  return <Link to="/" className="brand" aria-label="Shorlah Cloud home"><img src="/shorlah-logo.svg" alt="Shorlah Cloud" /></Link>
 }
 
 function Header({ profile }: { profile: Profile | null }) {
