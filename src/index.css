@@ -36,3 +36,27 @@
 .admin-sidebar-bottom a,.admin-sidebar-bottom button{color:#c0c9bd}
 .admin-notice{color:#3f6426}
 .success-note{color:#3f6f18}
+
+
+/* Stronger supporting-text contrast across public pages and admin. */
+:root{--muted:#303a30}
+.hero-kicker,.hero-index,.eyebrow{color:#354235}
+.hero-intro,.section-heading>p,.project-meta p,.detail-heading p,.back-link,
+.profile-headline,.contact-intro>p,.footer p,.footer-right,
+.rich-copy,.deliverables li,.experience-item span,.experience-item p,
+.aside-card small,.admin-user,.admin-list-item small,.muted,
+.enquiry-item small,.enquiry-item p,.admin-login>p,
+.search-box,.filter,.availability{color:#303b30}
+.contact-form label,.admin-form label,.admin-login label{color:#29352a}
+.contact-form input::placeholder,.contact-form textarea::placeholder,
+.admin-form input::placeholder,.admin-form textarea::placeholder,
+.admin-login input::placeholder{color:#4b5849;opacity:1}
+.nav-links>a:not(.nav-cta){color:#303b30}
+.project-category-chip,.skill-list span{color:#303f2d}
+.admin-sidebar .admin-nav{color:#d2d9cf}
+.admin-sidebar>.eyebrow{color:#c0cbb9}
+.admin-sidebar-bottom a,.admin-sidebar-bottom button{color:#d2d9cf}
+.admin-notice{color:#34551c}
+.success-note{color:#345d12}
+.status-pill{color:#3d4b38}
+.status-new{color:#426b1c}
