@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 112" role="img" aria-labelledby="title"><title id="title">Shorlah Cloud</title><g transform="translate(4 8)"><path d="M77 10H34C16 10 5 22 5 39s11 29 29 29h27c8 0 12 4 12 10s-4 10-12 10H9v-1" fill="none" stroke="#18201a" stroke-width="15" stroke-linecap="square" stroke-linejoin="round"/><path d="M111 10H75c-19 0-31 12-31 29v26c0 18 12 29 31 29h36" fill="none" stroke="#08c95a" stroke-width="15" stroke-linecap="square" stroke-linejoin="round"/><path d="M52 67l23 18" stroke="#08c95a" stroke-width="11" stroke-linecap="square"/></g><g font-family="Arial, Helvetica, sans-serif" font-weight="800"><text x="145" y="54" font-size="42" letter-spacing="1" fill="#18201a">SHORLAH</text><text x="147" y="88" font-size="24" letter-spacing="9" fill="#08b953">CLOUD</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 100" role="img" aria-labelledby="title">
+  <title id="title">Shorlah Cloud</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="11">
+    <path d="M66 17H35C16 17 12 27 12 36s7 17 22 17h22c15 0 22 8 22 17S70 87 54 87H15" stroke="#17211b"/>
+    <path d="M105 17H84C65 17 57 27 57 43v18c0 16 9 26 27 26h21" stroke="#08b95a"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-weight="700">
+    <text x="139" y="47" font-size="39" letter-spacing="1.2" fill="#17211b">SHORLAH</text>
+    <text x="141" y="80" font-size="23" letter-spacing="8" fill="#08b95a">CLOUD</text>
+  </g>
+</svg>
