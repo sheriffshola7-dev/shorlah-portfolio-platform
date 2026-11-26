@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, ChevronDown, ExternalLink, FileText, Instagram, Linkedin, Mail, Menu, Plus, Search, Send, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { Link, Route, Routes, useParams } from 'react-router-dom'
+import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, ExternalLink, FileText, Instagram, Linkedin, Mail, Menu, Plus, Search, Send, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { isSupabaseConfigured, MEDIA_BUCKET, mediaUrl, supabase } from './lib/supabase'
 
 type Profile = Record<string, any>
@@ -127,6 +127,8 @@ function AdminPage() {
   const [projectForm, setProjectForm] = useState({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', featured: false, is_published: false })
   const [categoryName, setCategoryName] = useState('')
   const [cover, setCover] = useState<File | null>(null)
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const db = supabase
 
@@ -134,7 +136,7 @@ function AdminPage() {
     if (!db) return
     const [p, w, c, e] = await Promise.all([
       db.from('profiles').select('*').eq('owner_id', uid).maybeSingle(),
-      db.from('projects').select('*, project_media(*)').eq('owner_id', uid).order('created_at', { ascending: false }),
+      db.from('projects').select('*, project_media(*), project_categories(*)').eq('owner_id', uid).order('created_at', { ascending: false }),
       db.from('categories').select('*').eq('owner_id', uid).order('sort_order'),
       db.from('enquiries').select('*').order('created_at', { ascending: false }),
     ])
@@ -187,25 +189,48 @@ function AdminPage() {
     if (!db || !session) return
     setBusy(true)
     const slug = projectForm.slug.trim() || projectForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    const { data, error } = await db.from('projects').insert({ ...projectForm, slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }).select().single()
-    if (error) { setNotice(error.message); setBusy(false); return }
+    const payload = { ...projectForm, slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
+    const result = editingId
+      ? await db.from('projects').update(payload).eq('id', editingId).select().single()
+      : await db.from('projects').insert(payload).select().single()
+    const data = result.data
+    const error = result.error
+    if (error || !data) { setNotice(error?.message || 'Could not save project.'); setBusy(false); return }
+    if (editingId) await db.from('project_categories').delete().eq('project_id', data.id)
     if (projectForm.category_id) {
       const map = await db.from('project_categories').insert({ owner_id: session.user.id, project_id: data.id, category_id: projectForm.category_id })
       if (map.error) setNotice(map.error.message)
     }
-    if (cover) {
-      const path = session.user.id + '/' + data.id + '/' + Date.now() + '-' + cover.name.replace(/[^a-zA-Z0-9._-]/g, '-')
-      const uploaded = await db.storage.from(MEDIA_BUCKET).upload(path, cover, { upsert: false })
+    const mediaFiles = [cover, ...galleryFiles].filter(Boolean) as File[]
+    for (let i = 0; i < mediaFiles.length; i++) {
+      const file = mediaFiles[i]
+      const path = session.user.id + '/' + data.id + '/' + Date.now() + '-' + i + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+      const uploaded = await db.storage.from(MEDIA_BUCKET).upload(path, file, { upsert: false })
       if (!uploaded.error) {
-        const saved = await db.from('project_media').insert({ owner_id: session.user.id, project_id: data.id, storage_path: path, media_type: 'image', alt_text: projectForm.title, is_cover: true, sort_order: 0 })
+        const saved = await db.from('project_media').insert({ owner_id: session.user.id, project_id: data.id, storage_path: path, media_type: 'image', alt_text: projectForm.title, is_cover: i === 0 && Boolean(cover), sort_order: i })
         if (saved.error) setNotice(saved.error.message)
       } else setNotice(uploaded.error.message)
     }
-    setNotice('Project created.')
+    setNotice(editingId ? 'Project updated.' : 'Project created.')
     setProjectForm({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', featured: false, is_published: false })
     setCover(null)
+    setGalleryFiles([])
+    setEditingId(null)
     await loadAdmin(session.user.id)
     setBusy(false)
+  }
+
+  const startEdit = (project: Project) => {
+    setEditingId(project.id)
+    setProjectForm({
+      title: project.title || '', slug: project.slug || '', summary: project.summary || '',
+      description: project.description || '', objective: project.objective || '', strategy: project.strategy || '',
+      category_id: project.project_categories?.[0]?.category_id || '', featured: Boolean(project.featured), is_published: Boolean(project.is_published),
+    })
+    setCover(null)
+    setGalleryFiles([])
+    setTab('projects')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const deleteProject = async (id: string) => {
@@ -226,7 +251,7 @@ function AdminPage() {
   if (!session) return <main className="admin-shell"><form className="admin-login" onSubmit={authenticate}><Brand/><span className="eyebrow">PRIVATE WORKSPACE</span><h1>{authMode === 'signin' ? 'Welcome back.' : 'Create your admin account.'}</h1><p>Sign in to manage your Shorlah Cloud portfolio.</p><label>Email address<input type="email" required value={email} onChange={e => setEmail(e.target.value)}/></label><label>Password<input type="password" minLength={6} required value={password} onChange={e => setPassword(e.target.value)}/></label><button className="button button-dark full">{authMode === 'signin' ? 'Sign in' : 'Create account'} <ArrowRight size={16}/></button>{authError && <p className="error-note">{authError}</p>}<button type="button" className="switch-auth" onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button><Link to="/" className="back-link"><ArrowLeft size={15}/> Return to portfolio</Link></form></main>
 
   return <div className="admin-shell"><aside className="admin-sidebar"><Brand/><span className="eyebrow">WORKSPACE</span>{[['projects','Projects'],['categories','Categories'],['profile','Profile'],['enquiries','Enquiries']].map(([id, label]) => <button key={id} className={tab === id ? 'admin-nav active' : 'admin-nav'} onClick={() => { setTab(id); setNotice('') }}>{label}{id === 'enquiries' && enquiries.filter(e => e.status === 'new').length > 0 && <i>{enquiries.filter(e => e.status === 'new').length}</i>}</button>)}<div className="admin-sidebar-bottom"><Link to="/" target="_blank">View public site <ExternalLink size={14}/></Link><button onClick={() => db.auth.signOut()}>Sign out</button></div></aside><main className="admin-main"><div className="admin-top"><div><span className="eyebrow">SHORLAH CLOUD / ADMIN</span><h1>{tab[0].toUpperCase() + tab.slice(1)}</h1></div><span className="admin-user">{session.user.email}</span></div>{notice && <p className="admin-notice">{notice}</p>}
-    {tab === 'projects' && <div className="admin-content"><section className="admin-panel"><h2>Add a project</h2><form className="admin-form" onSubmit={addProject}><label>Project title<input required value={projectForm.title} onChange={e => setProjectForm({...projectForm, title:e.target.value})} placeholder="Project name"/></label><label>URL slug (optional)<input value={projectForm.slug} onChange={e => setProjectForm({...projectForm, slug:e.target.value})} placeholder="project-name"/></label><label>Short summary<input required value={projectForm.summary} onChange={e => setProjectForm({...projectForm, summary:e.target.value})} placeholder="A concise project introduction"/></label><label>Overview<textarea rows={4} value={projectForm.description} onChange={e => setProjectForm({...projectForm, description:e.target.value})}/></label><div className="form-row"><label>Challenge / objective<textarea rows={3} value={projectForm.objective} onChange={e => setProjectForm({...projectForm, objective:e.target.value})}/></label><label>Strategy / approach<textarea rows={3} value={projectForm.strategy} onChange={e => setProjectForm({...projectForm, strategy:e.target.value})}/></label></div><label>Category<select value={projectForm.category_id} onChange={e => setProjectForm({...projectForm, category_id:e.target.value})}><option value="">Choose a category</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Cover image<input type="file" accept="image/*" onChange={e => setCover(e.target.files?.[0] || null)}/></label><div className="check-row"><label><input type="checkbox" checked={projectForm.featured} onChange={e => setProjectForm({...projectForm, featured:e.target.checked})}/> Feature this project</label><label><input type="checkbox" checked={projectForm.is_published} onChange={e => setProjectForm({...projectForm, is_published:e.target.checked})}/> Publish immediately</label></div><button className="button button-dark" disabled={busy}>{busy ? 'Saving…' : 'Create project'} <Plus size={16}/></button></form></section><section className="admin-panel"><div className="panel-heading"><h2>Your projects</h2><span>{projects.length} total</span></div>{projects.length ? projects.map(p => <div className="admin-list-item" key={p.id}><div><strong>{p.title}</strong><small>{p.slug} · {p.is_published ? 'Published' : 'Draft'}</small></div><div className="item-actions"><button onClick={() => togglePublish(p)}>{p.is_published ? 'Unpublish' : 'Publish'}</button><button className="danger" onClick={() => deleteProject(p.id)}>Delete</button></div></div>) : <p className="muted">No projects yet. Add your first case study above.</p>}</section></div>}
+    {tab === 'projects' && <div className="admin-content"><section className="admin-panel"><h2>Add a project</h2><form className="admin-form" onSubmit={addProject}><label>Project title<input required value={projectForm.title} onChange={e => setProjectForm({...projectForm, title:e.target.value})} placeholder="Project name"/></label><label>URL slug (optional)<input value={projectForm.slug} onChange={e => setProjectForm({...projectForm, slug:e.target.value})} placeholder="project-name"/></label><label>Short summary<input required value={projectForm.summary} onChange={e => setProjectForm({...projectForm, summary:e.target.value})} placeholder="A concise project introduction"/></label><label>Overview<textarea rows={4} value={projectForm.description} onChange={e => setProjectForm({...projectForm, description:e.target.value})}/></label><div className="form-row"><label>Challenge / objective<textarea rows={3} value={projectForm.objective} onChange={e => setProjectForm({...projectForm, objective:e.target.value})}/></label><label>Strategy / approach<textarea rows={3} value={projectForm.strategy} onChange={e => setProjectForm({...projectForm, strategy:e.target.value})}/></label></div><label>Category<select value={projectForm.category_id} onChange={e => setProjectForm({...projectForm, category_id:e.target.value})}><option value="">Choose a category</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Cover image<input type="file" accept="image/*" onChange={e => setCover(e.target.files?.[0] || null)}/></label><label>Additional gallery images<input type="file" accept="image/*" multiple onChange={e => setGalleryFiles(Array.from(e.target.files || []))}/></label><div className="check-row"><label><input type="checkbox" checked={projectForm.featured} onChange={e => setProjectForm({...projectForm, featured:e.target.checked})}/> Feature this project</label><label><input type="checkbox" checked={projectForm.is_published} onChange={e => setProjectForm({...projectForm, is_published:e.target.checked})}/> Publish immediately</label></div><div className="form-actions"><button className="button button-dark" disabled={busy}>{busy ? 'Saving…' : editingId ? 'Save project changes' : 'Create project'} <Plus size={16}/></button>{editingId && <button type="button" className="cancel-edit" onClick={() => { setEditingId(null); setProjectForm({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', featured: false, is_published: false }); setCover(null); setGalleryFiles([]) }}>Cancel edit</button>}</div></form></section><section className="admin-panel"><div className="panel-heading"><h2>Your projects</h2><span>{projects.length} total</span></div>{projects.length ? projects.map(p => <div className="admin-list-item" key={p.id}><div><strong>{p.title}</strong><small>{p.slug} · {p.is_published ? 'Published' : 'Draft'}</small></div><div className="item-actions"><button onClick={() => startEdit(p)}>Edit</button><button onClick={() => togglePublish(p)}>{p.is_published ? 'Unpublish' : 'Publish'}</button><button className="danger" onClick={() => deleteProject(p.id)}>Delete</button></div></div>) : <p className="muted">No projects yet. Add your first case study above.</p>}</section></div>}
     {tab === 'categories' && <section className="admin-panel narrow-panel"><h2>Project categories</h2><form className="inline-form" onSubmit={addCategory}><input required value={categoryName} onChange={e => setCategoryName(e.target.value)} placeholder="New category name"/><button className="button button-dark"><Plus size={16}/> Add</button></form>{categories.map(c => <div className="admin-list-item" key={c.id}><strong>{c.name}</strong><small>{c.slug}</small></div>)}</section>}
     {tab === 'profile' && <section className="admin-panel narrow-panel"><h2>Public profile</h2><form className="admin-form" onSubmit={saveProfile}><label>Display name<input value={profile.display_name || ''} onChange={e => setProfile({...profile, display_name:e.target.value})}/></label><label>Professional headline<input value={profile.headline || ''} onChange={e => setProfile({...profile, headline:e.target.value})}/></label><label>Biography<textarea rows={6} value={profile.bio || ''} onChange={e => setProfile({...profile, bio:e.target.value})}/></label><label>Contact email<input type="email" value={profile.contact_email || ''} onChange={e => setProfile({...profile, contact_email:e.target.value})}/></label><label>Location<input value={profile.location || ''} onChange={e => setProfile({...profile, location:e.target.value})}/></label><label>Skills (comma separated)<input value={(profile.skills || []).join(', ')} onChange={e => setProfile({...profile, skills:e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)})}/></label><label>LinkedIn URL<input value={profile.social_links?.linkedin || ''} onChange={e => setProfile({...profile, social_links:{...(profile.social_links || {}), linkedin:e.target.value}})}/></label><label>Instagram URL<input value={profile.social_links?.instagram || ''} onChange={e => setProfile({...profile, social_links:{...(profile.social_links || {}), instagram:e.target.value}})}/></label><label>Website URL<input value={profile.social_links?.website || ''} onChange={e => setProfile({...profile, social_links:{...(profile.social_links || {}), website:e.target.value}})}/></label><label><span><input type="checkbox" checked={Boolean(profile.is_published)} onChange={e => setProfile({...profile, is_published:e.target.checked})}/> Publish profile</span></label><button className="button button-dark" disabled={busy}>{busy ? 'Saving…' : 'Save profile'} <Check size={16}/></button></form></section>}
     {tab === 'enquiries' && <section className="admin-panel"><h2>Client enquiries</h2>{enquiries.length ? enquiries.map(e => <div className="enquiry-item" key={e.id}><div><strong>{e.subject || e.service_interest || 'New enquiry'}</strong><small>{e.full_name} · {e.email} · {new Date(e.created_at).toLocaleDateString()}</small><p>{e.message}</p></div><span className={'status-pill status-' + e.status}>{e.status}</span></div>) : <p className="muted">No enquiries have arrived yet.</p>}</section>}
