@@ -41,7 +41,7 @@ function Header({ profile }: { profile: Profile | null }) {
 }
 
 function Footer({ profile }: { profile: Profile | null }) {
-  return <footer className="footer"><div><Brand /><p>Thoughtful digital work. Clear outcomes.</p></div><div className="footer-right"><span>© {new Date().getFullYear()} Shorlah Cloud</span><Link to="/admin">Admin</Link></div></footer>
+  return <footer className="footer"><div><Brand /><p>Thoughtful digital work. Clear outcomes.</p></div><div className="footer-right"><span>© {new Date().getFullYear()} Shorlah Cloud</span></div></footer>
 }
 
 function SocialLinks({ profile }: { profile: Profile | null }) {
