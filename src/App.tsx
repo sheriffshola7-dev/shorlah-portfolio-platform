@@ -227,17 +227,23 @@ function AdminPage() {
     if (!db || !session) return
     setBusy(true)
     const slug = projectForm.slug.trim() || projectForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    const payload = { ...projectForm, deliverables: projectForm.deliverables.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
+    // category_id belongs to the project_categories join table, not projects.
+    const { category_id, client_visibility, ...projectFields } = projectForm
+    const payload = { ...projectFields, client_visibility: client_visibility ? 'public' : 'hidden', deliverables: projectForm.deliverables.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
     const result = editingId
       ? await db.from('projects').update(payload).eq('id', editingId).select().single()
       : await db.from('projects').insert(payload).select().single()
     const data = result.data
     const error = result.error
     if (error || !data) { setNotice(error?.message || 'Could not save project.'); setBusy(false); return }
-    if (editingId) await db.from('project_categories').delete().eq('project_id', data.id)
-    if (projectForm.category_id) {
-      const map = await db.from('project_categories').insert({ owner_id: session.user.id, project_id: data.id, category_id: projectForm.category_id })
-      if (map.error) setNotice(map.error.message)
+    let categoryError = ''
+    if (editingId) {
+      const removed = await db.from('project_categories').delete().eq('project_id', data.id)
+      if (removed.error) categoryError = removed.error.message
+    }
+    if (category_id && !categoryError) {
+      const map = await db.from('project_categories').insert({ owner_id: session.user.id, project_id: data.id, category_id })
+      if (map.error) categoryError = map.error.message
     }
     const mediaFiles = [cover, ...galleryFiles].filter(Boolean) as File[]
     for (let i = 0; i < mediaFiles.length; i++) {
@@ -249,7 +255,7 @@ function AdminPage() {
         if (saved.error) setNotice(saved.error.message)
       } else setNotice(uploaded.error.message)
     }
-    setNotice(editingId ? 'Project updated.' : 'Project created.')
+    setNotice(categoryError ? `Project saved, but its category could not be linked: ${categoryError}` : (editingId ? 'Project updated.' : 'Project created.'))
     setProjectForm({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', client_name: '', client_visibility: true, deliverables: '', results: '', tags: '', featured: false, is_published: false })
     setCover(null)
     setGalleryFiles([])
@@ -263,7 +269,7 @@ function AdminPage() {
     setProjectForm({
       title: project.title || '', slug: project.slug || '', summary: project.summary || '',
       description: project.description || '', objective: project.objective || '', strategy: project.strategy || '',
-      category_id: project.project_categories?.[0]?.category_id || '', client_name: project.client_name || '', client_visibility: project.client_visibility ?? true, deliverables: (project.deliverables || []).join('\n'), results: (project.results || []).join('\n'), tags: (project.tags || []).join(', '), featured: Boolean(project.featured), is_published: Boolean(project.is_published),
+      category_id: project.project_categories?.[0]?.category_id || '', client_name: project.client_name || '', client_visibility: project.client_visibility === 'public', deliverables: (project.deliverables || []).join('\n'), results: (project.results || []).join('\n'), tags: (project.tags || []).join(', '), featured: Boolean(project.featured), is_published: Boolean(project.is_published),
     })
     setCover(null)
     setGalleryFiles([])
