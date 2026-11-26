@@ -124,7 +124,7 @@ function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [notice, setNotice] = useState('')
-  const [projectForm, setProjectForm] = useState({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', featured: false, is_published: false })
+  const [projectForm, setProjectForm] = useState({ title: '', slug: '', summary: '', description: '', objective: '', strategy: '', category_id: '', client_name: '', client_visibility: true, deliverables: '', results: '', tags: '', featured: false, is_published: false })
   const [categoryName, setCategoryName] = useState('')
   const [cover, setCover] = useState<File | null>(null)
   const [galleryFiles, setGalleryFiles] = useState<File[]>([])
@@ -200,7 +200,7 @@ function AdminPage() {
     if (!db || !session) return
     setBusy(true)
     const slug = projectForm.slug.trim() || projectForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    const payload = { ...projectForm, deliverables: projectForm.deliverables.split('\\n').map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split('\\n').map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
+    const payload = { ...projectForm, deliverables: projectForm.deliverables.split(/\\r?\\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\\r?\\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
     const result = editingId
       ? await db.from('projects').update(payload).eq('id', editingId).select().single()
       : await db.from('projects').insert(payload).select().single()
