@@ -105,7 +105,7 @@ function ContactPage() {
     e.preventDefault()
     if (!supabase) { setState('error'); return }
     setState('sending')
-    const { error } = await supabase.from('enquiries').insert(form)
+    const { error } = await supabase.from('enquiries').insert({ ...form, owner_id: profile?.owner_id || null })
     setState(error ? 'error' : 'sent')
     if (!error) setForm({ full_name: '', email: '', service_interest: '', subject: '', message: '' })
   }
