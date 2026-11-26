@@ -241,7 +241,7 @@ function AdminPage() {
     setBusy(true)
     // Normalize manual slugs too: a pasted website URL must never become a broken project route.
     const slugSource = projectForm.slug.trim() || projectForm.title
-    const slug = slugSource.toLowerCase().trim().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const slug = slugSource.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     // category_id belongs to the project_categories join table, not projects.
     const selectedCategoryId = projectForm.category_id
     const { category_id: _categoryId, client_visibility, ...projectFields } = projectForm
