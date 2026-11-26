@@ -239,9 +239,12 @@ function AdminPage() {
     e.preventDefault()
     if (!db || !session) return
     setBusy(true)
-    const slug = projectForm.slug.trim() || projectForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    // Normalize manual slugs too: a pasted website URL must never become a broken project route.
+    const slugSource = projectForm.slug.trim() || projectForm.title
+    const slug = slugSource.toLowerCase().trim().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     // category_id belongs to the project_categories join table, not projects.
-    const { category_id, client_visibility, ...projectFields } = projectForm
+    const selectedCategoryId = projectForm.category_id
+    const { category_id: _categoryId, client_visibility, ...projectFields } = projectForm
     const payload = { ...projectFields, client_visibility: client_visibility ? 'public' : 'hidden', deliverables: projectForm.deliverables.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
     const result = editingId
       ? await db.from('projects').update(payload).eq('id', editingId).select().single()
@@ -250,13 +253,27 @@ function AdminPage() {
     const error = result.error
     if (error || !data) { setNotice(error?.message || 'Could not save project.'); setBusy(false); return }
     let categoryError = ''
+    // Replace the project's category mapping only after the project row is safely saved.
     if (editingId) {
       const removed = await db.from('project_categories').delete().eq('project_id', data.id)
       if (removed.error) categoryError = removed.error.message
     }
-    if (category_id && !categoryError) {
-      const map = await db.from('project_categories').insert({ owner_id: session.user.id, project_id: data.id, category_id })
-      if (map.error) categoryError = map.error.message
+    if (selectedCategoryId && !categoryError) {
+      const map = await db.from('project_categories')
+        .upsert({ owner_id: session.user.id, project_id: data.id, category_id: selectedCategoryId }, { onConflict: 'project_id,category_id' })
+        .select('project_id, category_id')
+        .single()
+      if (map.error) {
+        categoryError = map.error.message
+      } else {
+        const verify = await db.from('project_categories')
+          .select('category_id')
+          .eq('project_id', data.id)
+          .eq('category_id', selectedCategoryId)
+          .maybeSingle()
+        if (verify.error) categoryError = verify.error.message
+        else if (!verify.data) categoryError = 'The project saved, but its category link could not be verified. Please try again.'
+      }
     }
     const mediaFiles = [cover, ...galleryFiles].filter(Boolean) as File[]
     for (let i = 0; i < mediaFiles.length; i++) {
