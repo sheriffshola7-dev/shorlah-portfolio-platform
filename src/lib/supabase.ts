@@ -16,9 +16,4 @@ export const mediaUrl = (path?: string | null) => {
   return supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl
 }
 
-export const profileImageUrl = (path?: string | null) => {
-  if (!path || !supabase) return ''
-  return supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path, {
-    transform: { width: 640, height: 640, resize: 'cover', quality: 72 },
-  }).data.publicUrl
-}
+export const profileImageUrl = (path?: string | null) => mediaUrl(path)
