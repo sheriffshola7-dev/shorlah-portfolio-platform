@@ -14,3 +14,25 @@
 .testimonial-block{margin:55px 0;padding:30px;background:#edf2e9;border-left:3px solid #9bc75f}.testimonial-block .eyebrow{display:block}.testimonial-block blockquote{font:600 21px/1.65 Manrope;color:#384536;margin:18px 0}.testimonial-block p{font-size:11px;color:#788374;margin:0}
 
 .cv-upload-status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:-8px}.cv-remove-button{border:1px solid #e5c7c2;background:#fff7f5;color:#a44a40;padding:8px 11px;font-size:11px;cursor:pointer}.cv-remove-button:hover{background:#fbe9e5}
+
+
+/* Improved text contrast: keep the soft palette, make supporting copy easier to read. */
+:root{--muted:#535e52}
+.hero-kicker,.hero-index,.eyebrow{color:#586456}
+.hero-intro,.section-heading>p,.project-meta p,.detail-heading p,.back-link,
+.profile-headline,.contact-intro>p,.footer p,.footer-right,
+.rich-copy,.deliverables li,.experience-item span,.experience-item p,
+.aside-card small,.admin-user,.admin-list-item small,.muted,
+.enquiry-item small,.enquiry-item p,.admin-login>p,
+.search-box,.filter,.availability{color:#515c50}
+.contact-form label,.admin-form label,.admin-login label{color:#424d41}
+.contact-form input::placeholder,.contact-form textarea::placeholder,
+.admin-form input::placeholder,.admin-form textarea::placeholder,
+.admin-login input::placeholder{color:#687365;opacity:1}
+.nav-links>a:not(.nav-cta){color:#465247}
+.project-category-chip,.skill-list span{color:#465541}
+.admin-sidebar .admin-nav{color:#c0c9bd}
+.admin-sidebar>.eyebrow{color:#aab7a4}
+.admin-sidebar-bottom a,.admin-sidebar-bottom button{color:#c0c9bd}
+.admin-notice{color:#3f6426}
+.success-note{color:#3f6f18}
