@@ -200,7 +200,7 @@ function AdminPage() {
     if (!db || !session) return
     setBusy(true)
     const slug = projectForm.slug.trim() || projectForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    const payload = { ...projectForm, deliverables: projectForm.deliverables.split(/\\r?\\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\\r?\\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
+    const payload = { ...projectForm, deliverables: projectForm.deliverables.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), results: projectForm.results.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean), tags: projectForm.tags.split(',').map((v: string) => v.trim()).filter(Boolean), slug, owner_id: session.user.id, published_at: projectForm.is_published ? new Date().toISOString() : null }
     const result = editingId
       ? await db.from('projects').update(payload).eq('id', editingId).select().single()
       : await db.from('projects').insert(payload).select().single()
@@ -236,7 +236,7 @@ function AdminPage() {
     setProjectForm({
       title: project.title || '', slug: project.slug || '', summary: project.summary || '',
       description: project.description || '', objective: project.objective || '', strategy: project.strategy || '',
-      category_id: project.project_categories?.[0]?.category_id || '', client_name: project.client_name || '', client_visibility: project.client_visibility ?? true, deliverables: (project.deliverables || []).join('\\n'), results: (project.results || []).join('\\n'), tags: (project.tags || []).join(', '), featured: Boolean(project.featured), is_published: Boolean(project.is_published),
+      category_id: project.project_categories?.[0]?.category_id || '', client_name: project.client_name || '', client_visibility: project.client_visibility ?? true, deliverables: (project.deliverables || []).join('\n'), results: (project.results || []).join('\n'), tags: (project.tags || []).join(', '), featured: Boolean(project.featured), is_published: Boolean(project.is_published),
     })
     setCover(null)
     setGalleryFiles([])
