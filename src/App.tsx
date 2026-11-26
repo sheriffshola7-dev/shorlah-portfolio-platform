@@ -183,14 +183,23 @@ function AdminPage() {
 
   const removeProfileCv = async () => {
     if (!db || !session || !profile.cv_path) return
+    setBusy(true)
     const oldPath = profile.cv_path
-    const { error } = await db.storage.from(MEDIA_BUCKET).remove([oldPath])
-    if (error) {
-      setNotice('Could not remove the uploaded CV: ' + error.message)
+    // Clear the public profile link first so visitors stop seeing the old CV immediately.
+    const { error: updateError } = await db.from('profiles')
+      .update({ cv_path: null })
+      .eq('owner_id', session.user.id)
+    if (updateError) {
+      setNotice('Could not remove the public CV link: ' + updateError.message)
+      setBusy(false)
       return
     }
     setProfile((current: Profile) => ({ ...current, cv_path: null }))
-    setNotice('Wrong CV removed. Upload the correct PDF, then save your profile.')
+    const { error: storageError } = await db.storage.from(MEDIA_BUCKET).remove([oldPath])
+    setNotice(storageError
+      ? 'The public CV link has been removed. The old file could not be deleted from storage: ' + storageError.message
+      : 'CV removed from your public profile and storage. You can now upload the correct PDF.')
+    setBusy(false)
   }
 
   const saveProfile = async (e: FormEvent) => {
